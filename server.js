@@ -1,8 +1,10 @@
-const express   = require("express");
-const cors      = require("cors");
-const mysql     = require("mysql2");
-const path      = require("path");
-const os        = require("os");
+require("dotenv").config(); // .env file load karo (local pe)
+
+const express = require("express");
+const cors    = require("cors");
+const mysql   = require("mysql2");
+const path    = require("path");
+const os      = require("os");
 
 const app = express();
 app.use(cors());
@@ -10,6 +12,8 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ── MySQL Connection ──────────────────────────────────────
+// Local pe: .env file se values aayengi
+// Online pe: FreeSQLDatabase ki default values use hongi
 const db = mysql.createConnection({
   host:     process.env.DB_HOST     || "sql8.freesqldatabase.com",
   port:     process.env.DB_PORT     || 3306,
@@ -20,7 +24,7 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
   if (err) { console.error("❌ MySQL connect failed:", err.message); process.exit(1); }
-  console.log("✅ MySQL connected!");
+  console.log("✅ MySQL connected! Host:", process.env.DB_HOST || "sql8.freesqldatabase.com");
   setupTables();
 });
 
@@ -62,8 +66,6 @@ function setupTables() {
 }
 
 // ── AUTH ─────────────────────────────────────────────────
-
-// Login
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim()) return res.status(400).json({ error: "Username required" });
@@ -71,15 +73,12 @@ app.post("/api/login", (req, res) => {
 
   db.query("SELECT * FROM users WHERE username = ?", [username], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-
     if (rows.length === 0) {
-      // New user - register
       db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], (err2, result) => {
         if (err2) return res.status(500).json({ error: err2.message });
         res.json({ user_id: result.insertId, username });
       });
     } else {
-      // Existing user - check password
       if (rows[0].password && rows[0].password !== password)
         return res.status(401).json({ error: "Incorrect password." });
       res.json({ user_id: rows[0].id, username: rows[0].username });
@@ -87,7 +86,6 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-// Signup
 app.post("/api/signup", (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim()) return res.status(400).json({ error: "Username required" });
@@ -106,7 +104,6 @@ app.post("/api/signup", (req, res) => {
 });
 
 // ── PRODUCTS ─────────────────────────────────────────────
-
 app.get("/api/products/:user_id", (req, res) => {
   db.query("SELECT * FROM products WHERE user_id = ?", [req.params.user_id], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -124,7 +121,6 @@ app.post("/api/products", (req, res) => {
     [user_id, name],
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
-
       if (rows.length > 0) {
         db.query("UPDATE products SET price = ? WHERE id = ?", [price, rows[0].id], (err2) => {
           if (err2) return res.status(500).json({ error: err2.message });
@@ -161,19 +157,16 @@ app.delete("/api/products/:id", (req, res) => {
 });
 
 // ── BILLS ────────────────────────────────────────────────
-
 app.get("/api/bills/:user_id", (req, res) => {
   db.query(
     "SELECT * FROM bills WHERE user_id = ? ORDER BY id DESC",
     [req.params.user_id],
     (err, bills) => {
       if (err) return res.status(500).json({ error: err.message });
-
       if (bills.length === 0) return res.json([]);
 
       let done = 0;
       const result = bills.map(bill => ({ ...bill, items: [] }));
-
       result.forEach((bill, i) => {
         db.query("SELECT * FROM bill_items WHERE bill_id = ?", [bill.id], (err2, items) => {
           if (!err2) result[i].items = items;
@@ -195,10 +188,8 @@ app.post("/api/bills", (req, res) => {
     [user_id, invoice, customer, total, date],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-
       const bill_id = result.insertId;
       let done = 0;
-
       items.forEach(item => {
         db.query(
           "INSERT INTO bill_items (bill_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?)",
@@ -206,8 +197,7 @@ app.post("/api/bills", (req, res) => {
           (err2) => {
             if (err2) console.error("item insert error:", err2.message);
             done++;
-            if (done === items.length)
-              res.json({ message: "Bill saved", bill_id });
+            if (done === items.length) res.json({ message: "Bill saved", bill_id });
           }
         );
       });
