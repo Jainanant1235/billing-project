@@ -295,9 +295,7 @@ tr:hover td { background: #f9fffe; }
 <script>
 
 // ─── CONFIG ──────────────────────────────────────────────
-const API = window.location.hostname === "localhost" 
-    ? "http://localhost:5000/api" 
-    : `${window.location.protocol}//${window.location.hostname}/api`;
+const API = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 // ─── STATE ───────────────────────────────────────────────
 let currentUser = null;    // { user_id, username }
@@ -460,9 +458,11 @@ function showTab(tabId, btn) {
 async function loadProductsFromDB() {
   try {
     let res = await fetch(`${API}/products/${currentUser.user_id}`);
-    products = await res.json();
+    let data = await res.json();
+    products = Array.isArray(data) ? data : [];
   } catch(e) {
     console.error("Products load error:", e);
+    products = [];
   }
 }
 
@@ -672,7 +672,8 @@ async function saveBill() {
 async function loadBillsFromDB() {
   try {
     let res = await fetch(`${API}/bills/${currentUser.user_id}`);
-    bills = await res.json();
+    let billData = await res.json();
+    bills = Array.isArray(billData) ? billData : [];
   } catch(e) {
     console.error("Bills load error:", e);
   }
