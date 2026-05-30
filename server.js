@@ -14,19 +14,40 @@ app.use(express.static(__dirname));
 // ── MySQL Connection ──────────────────────────────────────
 // Local pe: .env file se values aayengi
 // Online pe: FreeSQLDatabase ki default values use hongi
-const db = mysql.createConnection({
+const dbConfig = {
   host:     process.env.DB_HOST     || "sql8.freesqldatabase.com",
   port:     process.env.DB_PORT     || 3306,
   user:     process.env.DB_USER     || "sql8828738",
   password: process.env.DB_PASSWORD || "8QWWyMKMCE",
   database: process.env.DB_NAME     || "sql8828738"
-});
+};
 
-db.connect((err) => {
-  if (err) { console.error("❌ MySQL connect failed:", err.message); process.exit(1); }
-  console.log("✅ MySQL connected! Host:", process.env.DB_HOST || "sql8.freesqldatabase.com");
-  setupTables();
-});
+let db;
+
+function connectDB() {
+  db = mysql.createConnection(dbConfig);
+
+  db.connect((err) => {
+    if (err) {
+      console.error("❌ MySQL connect failed:", err.message);
+      setTimeout(connectDB, 3000); // 3 sec baad retry karo
+      return;
+    }
+    console.log("✅ MySQL connected! Host:", process.env.DB_HOST || "sql8.freesqldatabase.com");
+    setupTables();
+  });
+
+  // Connection toot jaaye toh auto reconnect
+  db.on("error", (err) => {
+    console.error("MySQL error:", err.message);
+    if (err.code === "PROTOCOL_CONNECTION_LOST" || err.code === "ECONNRESET" || err.fatal) {
+      console.log("🔄 Reconnecting...");
+      connectDB();
+    }
+  });
+}
+
+connectDB();
 
 // ── Tables Setup ─────────────────────────────────────────
 function setupTables() {
