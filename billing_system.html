@@ -295,7 +295,9 @@ tr:hover td { background: #f9fffe; }
 <script>
 
 // ─── CONFIG ──────────────────────────────────────────────
-const API = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const API = window.location.hostname === "localhost" 
+    ? "http://localhost:5000/api" 
+    : `${window.location.protocol}//${window.location.hostname}/api`;
 
 // ─── STATE ───────────────────────────────────────────────
 let currentUser = null;    // { user_id, username }

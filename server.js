@@ -247,7 +247,7 @@ function getLocalIP() {
 }
 
 initDB().then(() => {
-  app.listen(5000, () => {
+  app.listen(process.env.PORT || 5000, () => {
     const ip = getLocalIP();
     console.log("\n🚀 Server is running!");
     console.log("   Local:   http://localhost:5000/billing_system.html");
