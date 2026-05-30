@@ -460,9 +460,11 @@ function showTab(tabId, btn) {
 async function loadProductsFromDB() {
   try {
     let res = await fetch(`${API}/products/${currentUser.user_id}`);
-    products = await res.json();
+    let data = await res.json();
+    products = Array.isArray(data) ? data : [];
   } catch(e) {
-    console.error("Products load error:", e);
+    console.error('Products load error:', e);
+    products = [];
   }
 }
 
@@ -672,7 +674,8 @@ async function saveBill() {
 async function loadBillsFromDB() {
   try {
     let res = await fetch(`${API}/bills/${currentUser.user_id}`);
-    bills = await res.json();
+    let billData = await res.json();
+    bills = Array.isArray(billData) ? billData : [];
   } catch(e) {
     console.error("Bills load error:", e);
   }
