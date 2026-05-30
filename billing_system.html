@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Anant Project</title>
+  <style>
+/* ── Reset & Base ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; font-size: 14px; padding-bottom: 80px; background: #f0f2f5; color: #222; }
+
+/* ── Container ── */
+.container { max-width: 860px; margin: auto; padding: 0 12px; }
+
+/* ── Header ── */
+.header {
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(135deg, #1b5e20, #4CAF50);
+  padding: 14px 20px; border-radius: 0 0 18px 18px;
+  margin-bottom: 14px; box-shadow: 0 4px 16px rgba(76,175,80,0.3);
+  flex-wrap: wrap; gap: 8px;
+}
+.header-left h2 { color: white; font-size: 18px; font-weight: 700; }
+.header-left p  { color: rgba(255,255,255,0.9); font-size: 15px; margin-top: 3px; font-weight: 500; }
+.logout-btn {
+  background: rgba(255,255,255,0.2); color: white; border: 1.5px solid rgba(255,255,255,0.5);
+  padding: 8px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
+  transition: 0.2s; backdrop-filter: blur(4px);
+}
+.logout-btn:hover { background: rgba(255,255,255,0.35); }
+
+/* ── Cards ── */
+.card {
+  background: white; border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 18px; margin-bottom: 14px;
+}
+
+/* ── Buttons ── */
+.app-btn {
+  background: linear-gradient(135deg, #43a047, #2e7d32);
+  color: white; border: none; padding: 10px 18px;
+  border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: 0.2s; box-shadow: 0 2px 6px rgba(46,125,50,0.3);
+}
+.app-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-red { background: linear-gradient(135deg, #e53935, #b71c1c); box-shadow: 0 2px 6px rgba(183,28,28,0.3); }
+.btn-blue { background: linear-gradient(135deg, #1e88e5, #1565c0); box-shadow: 0 2px 6px rgba(21,101,192,0.3); }
+.btn-orange { background: linear-gradient(135deg, #fb8c00, #e65100); box-shadow: 0 2px 6px rgba(230,81,0,0.3); }
+.btn-gray { background: linear-gradient(135deg, #757575, #424242); box-shadow: none; }
+
+/* ── Inputs ── */
+input, select {
+  width: 100%; padding: 11px 14px; margin: 6px 0;
+  border-radius: 9px; border: 1.5px solid #e0e0e0;
+  font-size: 14px; background: #fafafa; transition: 0.2s;
+  outline: none;
+}
+input:focus, select:focus { border-color: #4CAF50; background: white; box-shadow: 0 0 0 3px rgba(76,175,80,0.12); }
+
+/* ── Section headings ── */
+.section-title { font-size: 15px; font-weight: 700; color: #333; margin: 10px 0 8px; }
+
+/* ── Product list ── */
+#productListUI { list-style: none; padding: 0; }
+#productListUI li {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-radius: 10px; margin-bottom: 7px;
+  background: #f8fdf8; border: 1px solid #e8f5e9;
+}
+#productListUI li span { font-weight: 600; color: #2e7d32; }
+#productListUI li div { display: flex; gap: 6px; }
+
+/* ── Table ── */
+table { width: 100%; border-collapse: collapse; margin-top: 12px; border-radius: 10px; overflow: hidden; }
+th { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; padding: 11px 10px; font-size: 13px; }
+td { padding: 10px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f9fffe; }
+
+/* ── Bill history ── */
+#billHistory { list-style: none; padding: 0; }
+#billHistory li {
+  background: white; border-radius: 12px; padding: 14px;
+  margin-bottom: 10px; border: 1px solid #eee;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+.bill-info { font-size: 13px; color: #555; margin-bottom: 8px; line-height: 1.6; }
+.bill-info strong { color: #222; }
+
+/* ── Bottom Tabs ── */
+#bottomTabs {
+  position: fixed; bottom: 0; left: 0; width: 100%;
+  display: flex; background: white;
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.1);
+  padding: 6px 10px 8px; gap: 6px; z-index: 100;
+}
+.tabBtn {
+  flex: 1; background: transparent; color: #888;
+  border: none; border-radius: 12px; padding: 8px 4px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: 0.2s; display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.tabBtn span.tab-icon { font-size: 20px; }
+.tabBtn:hover { background: #f0fdf0; color: #4CAF50; }
+.tabBtn.tab-active { background: #e8f5e9; color: #2e7d32; }
+
+/* ── Popup ── */
+#pricePopup {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45); display: flex;
+  align-items: center; justify-content: center; z-index: 999;
+}
+#pricePopup > div {
+  background: white; border-radius: 16px; padding: 28px;
+  width: 90%; max-width: 340px; text-align: center;
+  animation: popIn 0.22s ease;
+}
+@keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ── Report chart buttons ── */
+.chart-btn-active { background: linear-gradient(135deg, #43a047, #2e7d32) !important; }
+.chart-btn-inactive { background: linear-gradient(135deg, #bdbdbd, #9e9e9e) !important; box-shadow: none !important; }
+
+/* ── Row layout ── */
+.row { display: flex; gap: 10px; }
+.row input { flex: 1; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.top-bar input { width: 200px; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .header { border-radius: 0 0 14px 14px; padding: 12px 14px; }
+  .row { flex-direction: column; }
+  #productListUI li { flex-direction: column; align-items: flex-start; gap: 8px; }
+  #productListUI li div { width: 100%; justify-content: flex-end; }
+  .top-bar { flex-direction: column; align-items: stretch; }
+  .top-bar input { width: 100%; }
+}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+<div class="container">
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:#f5f5f5; padding:20px;">
+    <div style="background:white; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.15); padding:40px 30px; width:100%; max-width:360px;">
+      <h2 style="margin:0 0 6px; font-size:22px; text-align:center;">🧾 Anant Billing App</h2>
+      <p style="color:#888; font-size:13px; margin:0 0 24px; text-align:center;">Login to your account</p>
+      <input id="username" placeholder="Username" style="margin-bottom:10px;">
+      <input id="password" type="password" placeholder="Password" style="margin-bottom:14px;">
+      <div style="display:flex; gap:10px;">
+        <button class="app-btn" style="flex:1; padding:12px; font-size:15px; background:#2196F3;" onclick="openSignupTab()">Sign Up</button>
+        <button class="app-btn" style="flex:1; padding:12px; font-size:15px;" onclick="login()">Login →</button>
+      </div>
+      <p id="loginError" style="color:red; font-size:12px; margin-top:10px; display:none;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP PAGE (hidden, shown as overlay/new view) -->
+<div id="signupPage" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f5f5f5; z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.15); padding:40px 30px; width:100%; max-width:360px; margin:20px;">
+    <h2 style="margin:0 0 6px; font-size:22px; text-align:center;">✨ Create Account</h2>
+    <p style="color:#888; font-size:13px; margin:0 0 24px; text-align:center;">Fill in your details to sign up</p>
+    <input id="regUsername" placeholder="Choose username" style="margin-bottom:10px;">
+    <input id="regPassword" type="password" placeholder="Choose password" style="margin-bottom:10px;">
+    <input id="regConfirm" type="password" placeholder="Confirm password" style="margin-bottom:14px;">
+    <button class="app-btn" style="width:100%; padding:12px; font-size:15px; background:#4CAF50;" onclick="signup()">Create Account ✓</button>
+    <button onclick="closeSignupTab()" style="width:100%; margin-top:10px; padding:10px; background:none; border:1px solid #ddd; border-radius:6px; cursor:pointer; color:#666; font-size:14px;">← Back to Login</button>
+    <p id="signupError" style="color:red; font-size:12px; margin-top:10px; display:none;"></p>
+  </div>
+</div>
+
+<div id="appPage" style="display:none;">
+
+<div class="header">
+  <div class="header-left">
+    <h2>🧾 Anant Billing App</h2>
+    <p id="greetingText">Welcome!</p>
+  </div>
+  <button onclick="logout()" class="logout-btn">🚪 Logout</button>
+</div>
+
+<div id="productTab" class="card">
+  <div class="top-bar">
+    <h3>Add Product</h3>
+    <input id="searchProduct" placeholder="&#128269; Search..." onkeyup="searchProduct()">
+  </div>
+  <div class="row">
+    <input id="name" placeholder="Product Name">
+    <input id="price" type="number" min="1" placeholder="Price">
+  </div>
+  <button class="app-btn" onclick="addProduct()">Add</button>
+  <h3>Product List</h3>
+  <ul id="productListUI"></ul>
+</div>
+
+
+<div id="billingTab" style="display:none;" class="card">
+  <h3>Billing</h3>
+  <input id="customerName" type="text" placeholder="Customer Name">
+  <select id="productList"></select>
+  <input id="qty" type="number" min="1" placeholder="Quantity">
+  <button class="app-btn" onclick="addToCart()">Add to Bill</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Item Name</th><th>Price</th><th>Qty</th><th>Total</th><th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="billTable"></tbody>
+  </table>
+
+  <button class="app-btn" onclick="saveBill()">Save Bill</button>
+  <h3>Total Amount: ₹ <span id="total">0</span></h3>
+</div>
+
+
+<div id="historyTab" style="display:none;" class="card">
+  <input id="searchBill" placeholder="Search by invoice or customer..." onkeyup="searchBill()">
+  <h3>📜 Bill History</h3>
+  <ul id="billHistory"></ul>
+</div>
+
+
+<div id="reportTab" style="display:none;">
+
+  <!-- Stats Cards -->
+  <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:130px; background:linear-gradient(135deg,#4CAF50,#2e7d32); color:white; border-radius:14px; padding:18px; text-align:center; box-shadow:0 4px 15px rgba(76,175,80,0.3);">
+      <div style="font-size:22px;">📅</div>
+      <div style="font-size:11px; opacity:0.85; margin-top:4px;">Today's Sale</div>
+      <div style="font-size:24px; font-weight:700; margin-top:4px;">₹<span id="todaySale">0</span></div>
+    </div>
+    <div style="flex:1; min-width:130px; background:linear-gradient(135deg,#2196F3,#1565c0); color:white; border-radius:14px; padding:18px; text-align:center; box-shadow:0 4px 15px rgba(33,150,243,0.3);">
+      <div style="font-size:22px;">📆</div>
+      <div style="font-size:11px; opacity:0.85; margin-top:4px;">Monthly Sale</div>
+      <div style="font-size:24px; font-weight:700; margin-top:4px;">₹<span id="monthSale">0</span></div>
+    </div>
+    <div style="flex:1; min-width:130px; background:linear-gradient(135deg,#FF9800,#e65100); color:white; border-radius:14px; padding:18px; text-align:center; box-shadow:0 4px 15px rgba(255,152,0,0.3);">
+      <div style="font-size:22px;">🧾</div>
+      <div style="font-size:11px; opacity:0.85; margin-top:4px;">Total Bills</div>
+      <div style="font-size:24px; font-weight:700; margin-top:4px;"><span id="totalBills">0</span></div>
+    </div>
+  </div>
+
+  <!-- Chart toggle buttons -->
+  <div style="display:flex; gap:8px; margin-bottom:12px;">
+    <button onclick="switchChart('line')" id="btnLine" class="app-btn chart-btn-active" style="flex:1; padding:11px;">📈 Line</button>
+    <button onclick="switchChart('bar')" id="btnBar" class="app-btn chart-btn-inactive" style="flex:1; padding:11px;">📊 Bar</button>
+    <button onclick="switchChart('pie')" id="btnPie" class="app-btn chart-btn-inactive" style="flex:1; padding:11px;">🥧 Pie</button>
+  </div>
+
+  <!-- Main Chart -->
+  <div class="card" style="padding:15px;">
+    <h4 style="margin:0 0 10px; color:#333;">📈 Monthly Daily Sales</h4>
+    <canvas id="chart" style="max-height:260px;"></canvas>
+  </div>
+
+  <!-- Top Products -->
+  <div class="card" style="padding:15px; margin-top:10px;">
+    <h4 style="margin:0 0 10px; color:#333;">🏆 Top Products This Month</h4>
+    <canvas id="pieChart" style="max-height:280px;"></canvas>
+  </div>
+
+</div>
+
+
+<div id="pricePopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
+  <div style="background:white; padding:20px; border-radius:10px; width:80%; max-width:300px; box-sizing:border-box;">
+    <h3>Set New Price</h3>
+    <input id="newPriceInput" type="number" min="1" placeholder="Enter price" style="width:100%; padding:8px; margin-top:10px; box-sizing:border-box;">
+    <br><br>
+    <button class="app-btn" onclick="saveNewPrice()">Save</button>
+    <button class="app-btn" onclick="closePopup()">Cancel</button>
+  </div>
+</div>
+
+<div id="bottomTabs">
+  <button class="tabBtn tab-active" id="tab-productTab" onclick="showTab('productTab', this)"><span class="tab-icon">📦</span>Products</button>
+  <button class="tabBtn" id="tab-billingTab" onclick="showTab('billingTab', this)"><span class="tab-icon">🧾</span>Billing</button>
+  <button class="tabBtn" id="tab-historyTab" onclick="showTab('historyTab', this)"><span class="tab-icon">📜</span>History</button>
+  <button class="tabBtn" id="tab-reportTab" onclick="showTab('reportTab', this)"><span class="tab-icon">📊</span>Reports</button>
+</div>
+
+</div> <!-- appPage end -->
+</div> <!-- container end -->
+
+<script>
+
+// ─── CONFIG ──────────────────────────────────────────────
+const API = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+
+// ─── STATE ───────────────────────────────────────────────
+let currentUser = null;    // { user_id, username }
+let products = [];
+let bills = [];
+let currentBill = [];
+let totalAmount = 0;
+let editProductId = null;
+let chartInstance = null;
+
+// ─── INIT ────────────────────────────────────────────────
+window.onload = function () {
+  const saved = sessionStorage.getItem("currentUser");
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    showApp();
+  } else {
+    document.getElementById("loginPage").style.display = "block";
+    document.getElementById("appPage").style.display = "none";
+  }
+};
+
+// ─── AUTH ─────────────────────────────────────────────────
+async function login() {
+  let username = document.getElementById("username").value.trim();
+  let password = document.getElementById("password").value.trim();
+  let errEl = document.getElementById("loginError");
+  errEl.style.display = "none";
+
+  if (!username) { errEl.textContent = "Please enter username."; errEl.style.display = "block"; return; }
+  if (!password) { errEl.textContent = "Please enter password."; errEl.style.display = "block"; return; }
+
+  try {
+    let res = await fetch(`${API}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    let data = await res.json();
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = "block";
+      return;
+    }
+    currentUser = data;
+    sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
+    showApp();
+  } catch (e) {
+    errEl.textContent = "❌ Could not connect to server. Please make sure the server is running.";
+    errEl.style.display = "block";
+  }
+}
+
+function openSignupTab() {
+  let sp = document.getElementById("signupPage");
+  sp.style.display = "flex";
+  document.getElementById("regUsername").value = "";
+  document.getElementById("regPassword").value = "";
+  document.getElementById("regConfirm").value  = "";
+  document.getElementById("signupError").style.display = "none";
+}
+
+function closeSignupTab() {
+  document.getElementById("signupPage").style.display = "none";
+}
+
+async function signup() {
+  let username = document.getElementById("regUsername").value.trim();
+  let password = document.getElementById("regPassword").value.trim();
+  let confirm  = document.getElementById("regConfirm").value.trim();
+  let errEl    = document.getElementById("signupError");
+  errEl.style.display = "none";
+
+  if (!username) { errEl.textContent = "Please enter a username."; errEl.style.display = "block"; return; }
+  if (!password) { errEl.textContent = "Please enter a password."; errEl.style.display = "block"; return; }
+  if (password !== confirm) { errEl.textContent = "Passwords do not match."; errEl.style.display = "block"; return; }
+
+  try {
+    let res = await fetch(`${API}/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    let data = await res.json();
+    if (data.error) { errEl.textContent = data.error; errEl.style.display = "block"; return; }
+
+    // Success - close signup, go back to login, prefill username
+    closeSignupTab();
+    document.getElementById("username").value = username;
+    document.getElementById("password").value = "";
+    document.getElementById("loginError").style.display = "none";
+    alert("✅ Account created! Please login now.");
+  } catch(e) {
+    errEl.textContent = "❌ Could not connect to server.";
+    errEl.style.display = "block";
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem("currentUser");
+  currentUser = null;
+  products = [];
+  bills = [];
+  currentBill = [];
+  // Reset to product tab so next login starts fresh
+  document.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("tab-active"));
+  const firstTab = document.getElementById("tab-productTab");
+  if (firstTab) firstTab.classList.add("tab-active");
+  ["productTab","billingTab","historyTab","reportTab"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+  const pt = document.getElementById("productTab");
+  if (pt) pt.style.display = "block";
+  document.getElementById("loginPage").style.display = "block";
+  document.getElementById("appPage").style.display = "none";
+  // Clear login fields
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+  document.getElementById("loginError").style.display = "none";
+}
+
+async function showApp() {
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("appPage").style.display = "block";
+
+  // Show greeting
+  const greet = document.getElementById("greetingText");
+  if (greet && currentUser) {
+    const hour = new Date().getHours();
+    const timeGreet = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+    greet.textContent = timeGreet + ", " + currentUser.username + "! 👋";
+  }
+
+  await loadProductsFromDB();
+  await loadBillsFromDB();
+  showProducts();
+  loadProductsDropdown();
+  showBillHistory();
+  calculateTodaySale();
+  calculateMonthlySale();
+}
+
+// ─── TAB ──────────────────────────────────────────────────
+function showTab(tabId, btn) {
+  ["productTab", "billingTab", "historyTab", "reportTab"].forEach(id => {
+    document.getElementById(id).style.display = "none";
+  });
+  document.getElementById(tabId).style.display = "block";
+
+  document.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("tab-active"));
+  if (btn) btn.classList.add("tab-active");
+
+  if (tabId === "reportTab") {
+    calculateMonthlySale();
+  }
+}
+
+// ─── PRODUCTS API ────────────────────────────────────────
+async function loadProductsFromDB() {
+  try {
+    let res = await fetch(`${API}/products/${currentUser.user_id}`);
+    products = await res.json();
+  } catch(e) {
+    console.error("Products load error:", e);
+  }
+}
+
+async function addProduct() {
+  let name = document.getElementById("name").value.trim();
+  let price = parseFloat(document.getElementById("price").value);
+
+  if (!name || !price) { alert("Please enter valid details"); return; }
+
+  try {
+    let res = await fetch(`${API}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.user_id, name, price })
+    });
+    let data = await res.json();
+    alert(data.updated ? "Product already exists, price updated!" : "Product Added! ✅");
+
+    await loadProductsFromDB();
+    showProducts();
+    loadProductsDropdown();
+
+    document.getElementById("name").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("name").focus();
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+
+async function saveNewPrice() {
+  let value = document.getElementById("newPriceInput").value;
+  let newPrice = parseFloat(value);
+  if (!value || isNaN(newPrice) || newPrice <= 0) { alert("Please enter a valid number ❌"); return; }
+
+  try {
+    await fetch(`${API}/products/${editProductId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price: newPrice })
+    });
+
+    await loadProductsFromDB();
+    showProducts();
+    loadProductsDropdown();
+    closePopup();
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+
+async function deleteProduct(productId) {
+  if (!confirm("Delete this product?")) return;
+  try {
+    await fetch(`${API}/products/${productId}`, { method: "DELETE" });
+    await loadProductsFromDB();
+    showProducts();
+    loadProductsDropdown();
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+
+// ─── PRODUCT UI ──────────────────────────────────────────
+function showProducts() {
+  let list = document.getElementById("productListUI");
+  list.innerHTML = "";
+
+  products.forEach(p => {
+    let li = document.createElement("li");
+    li.innerHTML = `
+      <span>${p.name} - ₹${p.price}</span>
+      <div>
+        <button class="app-btn" onclick="editProduct(${p.id})">Set Price</button>
+        <button class="app-btn" onclick="deleteProduct(${p.id})">Delete</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function searchProduct() {
+  let input = document.getElementById("searchProduct").value.toLowerCase();
+  let list = document.getElementById("productListUI");
+  list.innerHTML = "";
+
+  products.filter(p => p.name.toLowerCase().includes(input)).forEach(p => {
+    let li = document.createElement("li");
+    li.innerHTML = `
+      <span>${p.name} - ₹${p.price}</span>
+      <div>
+        <button class="app-btn" onclick="editProduct(${p.id})">Set Price</button>
+        <button class="app-btn" onclick="deleteProduct(${p.id})">Delete</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function editProduct(productId) {
+  editProductId = productId;
+  document.getElementById("pricePopup").style.display = "flex";
+}
+
+function closePopup() {
+  document.getElementById("pricePopup").style.display = "none";
+  document.getElementById("newPriceInput").value = "";
+}
+
+function loadProductsDropdown() {
+  let select = document.getElementById("productList");
+  select.innerHTML = "";
+  products.forEach(p => {
+    let option = document.createElement("option");
+    option.text = p.name;
+    option.value = p.price;
+    select.add(option);
+  });
+}
+
+// ─── BILLING ─────────────────────────────────────────────
+function addToCart() {
+  let select = document.getElementById("productList");
+  let name = select.options[select.selectedIndex].text;
+  let price = parseFloat(select.value);
+  let qty = parseInt(document.getElementById("qty").value);
+
+  if (!qty || qty <= 0) { alert("Please enter valid quantity"); return; }
+
+  let existing = currentBill.find(item => item.name === name);
+  if (existing) {
+    existing.qty += qty;
+    existing.total = existing.qty * existing.price;
+  } else {
+    currentBill.push({ name, price, qty, total: price * qty });
+  }
+
+  renderBill();
+  document.getElementById("qty").value = "";
+  document.getElementById("qty").focus();
+}
+
+function renderBill() {
+  let table = document.getElementById("billTable");
+  table.innerHTML = "";
+  totalAmount = 0;
+
+  currentBill.forEach((item, index) => {
+    totalAmount += item.total;
+    table.innerHTML += `<tr>
+      <td>${item.name}</td>
+      <td>₹${item.price}</td>
+      <td>${item.qty}</td>
+      <td>₹${item.total}</td>
+      <td><button class="app-btn" onclick="deleteItem(${index})">Delete</button></td>
+    </tr>`;
+  });
+
+  document.getElementById("total").innerText = totalAmount;
+}
+
+function deleteItem(index) {
+  currentBill.splice(index, 1);
+  renderBill();
+}
+
+async function saveBill() {
+  let customer = document.getElementById("customerName").value.trim();
+
+  if (currentBill.length === 0) { alert("Please add items first"); return; }
+  if (!customer) { alert("Please enter customer name"); return; }
+
+  let billData = {
+    user_id: currentUser.user_id,
+    invoice: Date.now(),
+    customer,
+    items: currentBill,
+    total: totalAmount,
+    date: new Date().toISOString()
+  };
+
+  try {
+    let res = await fetch(`${API}/bills`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(billData)
+    });
+    let data = await res.json();
+    alert("Bill Saved! ✅");
+
+    currentBill = [];
+    totalAmount = 0;
+    document.getElementById("billTable").innerHTML = "";
+    document.getElementById("total").innerText = 0;
+    document.getElementById("customerName").value = "";
+
+    await loadBillsFromDB();
+    showBillHistory();
+    calculateTodaySale();
+    calculateMonthlySale();
+  } catch(e) {
+    alert("Error saving bill: " + e.message);
+  }
+}
+
+// ─── BILLS API ───────────────────────────────────────────
+async function loadBillsFromDB() {
+  try {
+    let res = await fetch(`${API}/bills/${currentUser.user_id}`);
+    bills = await res.json();
+  } catch(e) {
+    console.error("Bills load error:", e);
+  }
+}
+
+async function deleteBill(billId, index) {
+  if (!confirm("Are you sure you want to delete this bill?")) return;
+  try {
+    await fetch(`${API}/bills/${billId}`, { method: "DELETE" });
+    await loadBillsFromDB();
+    showBillHistory();
+    calculateTodaySale();
+    calculateMonthlySale();
+  } catch(e) {
+    alert("Error: " + e.message);
+  }
+}
+
+// ─── BILL HISTORY UI ─────────────────────────────────────
+function showBillHistory() {
+  let list = document.getElementById("billHistory");
+  list.innerHTML = "";
+
+  bills.forEach((bill, index) => {
+    let li = document.createElement("li");
+    let date = new Date(bill.date).toLocaleString();
+
+    li.innerHTML = `
+      <div>
+        <span>${bill.customer} | Invoice ${bill.invoice} | ₹${bill.total} | ${date}</span>
+        <button class="app-btn" id="toggleBtn-${index}" onclick="toggleBill(${index})">View Bill ⬇️</button>
+      </div>
+      <div id="billDetails-${index}" style="display:none; margin-top:10px;"></div>
+      <button class="app-btn" onclick="deleteBill(${bill.id}, ${index})">Delete Bill 🗑️</button>
+    `;
+
+    list.appendChild(li);
+    let hr = document.createElement("hr");
+    hr.style.cssText = "margin:15px 0; border:1px solid #ddd;";
+    list.appendChild(hr);
+  });
+}
+
+function toggleBill(index) {
+  let div = document.getElementById(`billDetails-${index}`);
+  let btn = document.getElementById(`toggleBtn-${index}`);
+  if (div.style.display === "block") {
+    div.style.display = "none";
+    div.innerHTML = "";
+    if (btn) btn.innerHTML = "View Bill ⬇️";
+    return;
+  }
+  if (btn) btn.innerHTML = "Close Bill ⬆️";
+
+  let bill = bills[index];
+  let content = `
+    <h4>Customer: ${bill.customer || "N/A"}</h4>
+    <h4>Invoice: ${bill.invoice}</h4>
+    <table border="1" style="width:100%; border-collapse:collapse;">
+      <tr><th>Item Name</th><th>Price</th><th>Qty</th><th>Total</th></tr>
+  `;
+
+  bill.items.forEach(item => {
+    content += `<tr><td>${item.name}</td><td>₹${item.price}</td><td>${item.qty}</td><td>₹${item.total}</td></tr>`;
+  });
+
+  content += `
+    </table>
+    <h3>Total: ₹${bill.total}</h3>
+    <button class="app-btn" onclick="printBill(${index})">Print Bill 🖨️</button>
+  `;
+
+  div.innerHTML = content;
+  div.style.display = "block";
+}
+
+function searchBill() {
+  let input = document.getElementById("searchBill").value.toLowerCase();
+  let list = document.getElementById("billHistory");
+  list.innerHTML = "";
+
+  let filtered = bills.filter(bill => {
+    return (bill.invoice || "").toString().includes(input) ||
+           (bill.customer || "").toLowerCase().includes(input);
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = "<p>No bills found.</p>";
+    return;
+  }
+
+  filtered.forEach((bill, index) => {
+    let li = document.createElement("li");
+    let date = new Date(bill.date).toLocaleString();
+    li.innerHTML = `
+      <span>${bill.customer} | Invoice ${bill.invoice} | ₹${bill.total} | ${date}</span>
+      <div>
+        <button class="app-btn" onclick="toggleBill(${bills.indexOf(bill)})">View</button>
+        <button class="app-btn" onclick="deleteBill(${bill.id})">Delete</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+// ─── PRINT ───────────────────────────────────────────────
+function printBill(index) {
+  let bill = bills[index];
+  let content = `
+    <h2>Anant Billing App</h2>
+    <p><b>Customer:</b> ${bill.customer}</p>
+    <p><b>Invoice:</b> ${bill.invoice}</p>
+    <hr>
+    <table border="1" style="width:100%; border-collapse:collapse;">
+      <tr><th>Item Name</th><th>Price</th><th>Qty</th><th>Total</th></tr>
+  `;
+  bill.items.forEach(item => {
+    content += `<tr><td>${item.name}</td><td>₹${item.price}</td><td>${item.qty}</td><td>₹${item.total}</td></tr>`;
+  });
+  content += `</table><h3>Total: ₹${bill.total}</h3><p>Thank you! 😊</p>`;
+
+  let w = window.open('', '', 'width=800,height=600');
+  w.document.write(content);
+  w.document.close();
+  w.print();
+}
+
+// ─── REPORTS ─────────────────────────────────────────────
+let currentChartType = 'line';
+let pieChartInstance = null;
+
+function calculateTodaySale() {
+  let today = new Date().toDateString();
+  let total = bills.reduce((sum, bill) => {
+    return new Date(bill.date).toDateString() === today ? sum + Number(bill.total) : sum;
+  }, 0);
+  document.getElementById('todaySale').innerText = total;
+}
+
+function calculateMonthlySale() {
+  let now = new Date();
+  let total = 0;
+  let dailyData = {};
+  let productData = {};
+
+  bills.forEach(bill => {
+    let date = new Date(bill.date);
+    if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+      total += Number(bill.total);
+      let day = date.getDate();
+      dailyData[day] = (dailyData[day] || 0) + Number(bill.total);
+
+      // top products
+      if (bill.items) {
+        bill.items.forEach(item => {
+          productData[item.name] = (productData[item.name] || 0) + Number(item.total);
+        });
+      }
+    }
+  });
+
+  document.getElementById('monthSale').innerText = total;
+  document.getElementById('totalBills').innerText = bills.length;
+
+  drawMainChart(dailyData, currentChartType);
+  drawPieChart(productData);
+}
+
+function switchChart(type) {
+  currentChartType = type;
+  ['btnLine','btnBar','btnPie'].forEach(id => {
+    document.getElementById(id).className = 'app-btn chart-btn-inactive';
+    document.getElementById(id).style.flex = '1';
+    document.getElementById(id).style.padding = '11px';
+  });
+  const activeMap = {line:'btnLine', bar:'btnBar', pie:'btnPie'};
+  document.getElementById(activeMap[type]).className = 'app-btn chart-btn-active';
+
+  let now = new Date();
+  let dailyData = {};
+  bills.forEach(bill => {
+    let date = new Date(bill.date);
+    if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+      let day = date.getDate();
+      dailyData[day] = (dailyData[day] || 0) + Number(bill.total);
+    }
+  });
+  drawMainChart(dailyData, type);
+}
+
+function drawMainChart(data, type) {
+  if (chartInstance) chartInstance.destroy();
+
+  const labels = Object.keys(data).map(d => 'Day ' + d);
+  const values = Object.values(data);
+  const colors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0','#00BCD4'];
+
+  let dataset = {
+    label: 'Sale (₹)',
+    data: values,
+    borderColor: '#4CAF50',
+    backgroundColor: type === 'line'
+      ? 'rgba(76,175,80,0.15)'
+      : type === 'bar'
+      ? values.map((_,i) => colors[i % colors.length])
+      : values.map((_,i) => colors[i % colors.length]),
+    borderWidth: 2,
+    pointBackgroundColor: '#4CAF50',
+    pointRadius: 5,
+    tension: 0.4,
+    fill: type === 'line'
+  };
+
+  chartInstance = new Chart(document.getElementById('chart'), {
+    type: type === 'pie' ? 'doughnut' : type,
+    data: { labels, datasets: [dataset] },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: type === 'pie' },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ₹' + ctx.parsed.y
+          }
+        }
+      },
+      scales: type === 'pie' ? {} : {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: val => '₹' + val }
+        }
+      }
+    }
+  });
+}
+
+function drawPieChart(productData) {
+  if (pieChartInstance) pieChartInstance.destroy();
+  const labels = Object.keys(productData);
+  const values = Object.values(productData);
+  if (!labels.length) return;
+
+  const colors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0','#00BCD4','#FF5722','#607D8B'];
+
+  pieChartInstance = new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.label + ': ₹' + ctx.parsed
+          }
+        }
+      }
+    }
+  });
+}
+
+</script>
+</body>
+</html>
