@@ -1,256 +1,243 @@
-const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
-const initSqlJs = require("sql.js");
+const express   = require("express");
+const cors      = require("cors");
+const mysql     = require("mysql2");
+const path      = require("path");
+const os        = require("os");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// HTML file serve karo
 app.use(express.static(__dirname));
 
-const DB_FILE = path.join(__dirname, "billing.db");
+// ── MySQL Connection ──────────────────────────────────────
+const db = mysql.createConnection({
+  host:     process.env.DB_HOST     || "sql8.freesqldatabase.com",
+  port:     process.env.DB_PORT     || 3306,
+  user:     process.env.DB_USER     || "sql8828738",
+  password: process.env.DB_PASSWORD || "8QWWyMKMCE",
+  database: process.env.DB_NAME     || "sql8828738"
+});
 
-let db; // global db instance
+db.connect((err) => {
+  if (err) { console.error("❌ MySQL connect failed:", err.message); process.exit(1); }
+  console.log("✅ MySQL connected!");
+  setupTables();
+});
 
-// ── DB Init ──────────────────────────────────────────────
-async function initDB() {
-  const SQL = await initSqlJs();
+// ── Tables Setup ─────────────────────────────────────────
+function setupTables() {
+  db.query(`CREATE TABLE IF NOT EXISTS users (
+    id       INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL DEFAULT ''
+  )`, err => { if(err) console.error("users table:", err.message); });
 
-  if (fs.existsSync(DB_FILE)) {
-    const fileBuffer = fs.readFileSync(DB_FILE);
-    db = new SQL.Database(fileBuffer);
-    console.log("✅ Existing database loaded");
-  } else {
-    db = new SQL.Database();
-    console.log("✅ New database created");
-  }
+  db.query(`CREATE TABLE IF NOT EXISTS products (
+    id      INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    name    VARCHAR(200) NOT NULL,
+    price   DECIMAL(10,2) NOT NULL
+  )`, err => { if(err) console.error("products table:", err.message); });
 
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL DEFAULT ''
-  )`);
-  // Add password column if upgrading old DB
-  try { db.run("ALTER TABLE users ADD COLUMN password TEXT NOT NULL DEFAULT ''"); } catch(e) {}
+  db.query(`CREATE TABLE IF NOT EXISTS bills (
+    id       INT AUTO_INCREMENT PRIMARY KEY,
+    user_id  INT NOT NULL,
+    invoice  VARCHAR(100) NOT NULL,
+    customer VARCHAR(200) NOT NULL,
+    total    DECIMAL(10,2) NOT NULL,
+    date     VARCHAR(50) NOT NULL
+  )`, err => { if(err) console.error("bills table:", err.message); });
 
-  db.run(`CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    price REAL NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS bills (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    invoice TEXT NOT NULL,
-    customer TEXT NOT NULL,
-    total REAL NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS bill_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bill_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    price REAL NOT NULL,
-    qty INTEGER NOT NULL,
-    total REAL NOT NULL,
-    FOREIGN KEY (bill_id) REFERENCES bills(id)
-  )`);
-
-  saveDB();
-  console.log("🗄️  Tables ready");
-}
-
-// Save DB to file after every write
-function saveDB() {
-  const data = db.export();
-  fs.writeFileSync(DB_FILE, Buffer.from(data));
-}
-
-// Helper: run query and return rows as array of objects
-function query(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    // sql.js returns BigInt for integers - convert all to Number
-    const cleaned = {};
-    for (const key in row) {
-      cleaned[key] = typeof row[key] === "bigint" ? Number(row[key]) : row[key];
-    }
-    rows.push(cleaned);
-  }
-  stmt.free();
-  return rows;
-}
-
-// Helper: run insert/update/delete
-function run(sql, params = []) {
-  db.run(sql, params);
-  const result = db.exec("SELECT last_insert_rowid()");
-  const val = result[0]?.values[0][0];
-  const id = Number(val);
-  saveDB();
-  return id;
+  db.query(`CREATE TABLE IF NOT EXISTS bill_items (
+    id      INT AUTO_INCREMENT PRIMARY KEY,
+    bill_id INT NOT NULL,
+    name    VARCHAR(200) NOT NULL,
+    price   DECIMAL(10,2) NOT NULL,
+    qty     INT NOT NULL,
+    total   DECIMAL(10,2) NOT NULL
+  )`, err => {
+    if(err) console.error("bill_items table:", err.message);
+    else    console.log("🗄️  Tables ready");
+  });
 }
 
 // ── AUTH ─────────────────────────────────────────────────
+
+// Login
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim()) return res.status(400).json({ error: "Username required" });
   if (!password?.trim()) return res.status(400).json({ error: "Password required" });
 
-  const existing = query("SELECT id, username, password FROM users WHERE username = ?", [username]);
+  db.query("SELECT * FROM users WHERE username = ?", [username], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
 
-  if (existing.length === 0) {
-    // New user - register
-    run("INSERT INTO users (username, password) VALUES (?, ?)", [username, password]);
-    const newUser = query("SELECT id, username FROM users WHERE username = ?", [username]);
-    return res.json({ user_id: newUser[0].id, username: newUser[0].username });
-  } else {
-    // Existing user - check password
-    if (existing[0].password && existing[0].password !== password) {
-      return res.status(401).json({ error: "Incorrect password." });
+    if (rows.length === 0) {
+      // New user - register
+      db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], (err2, result) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ user_id: result.insertId, username });
+      });
+    } else {
+      // Existing user - check password
+      if (rows[0].password && rows[0].password !== password)
+        return res.status(401).json({ error: "Incorrect password." });
+      res.json({ user_id: rows[0].id, username: rows[0].username });
     }
-    // If old user had no password, set it now
-    if (!existing[0].password) {
-      run("UPDATE users SET password = ? WHERE id = ?", [password, existing[0].id]);
-    }
-    return res.json({ user_id: existing[0].id, username: existing[0].username });
-  }
+  });
 });
 
-// ── SIGNUP ───────────────────────────────────────────────
+// Signup
 app.post("/api/signup", (req, res) => {
   const { username, password } = req.body;
   if (!username?.trim()) return res.status(400).json({ error: "Username required" });
   if (!password?.trim()) return res.status(400).json({ error: "Password required" });
 
-  const existing = query("SELECT id FROM users WHERE username = ?", [username]);
-  if (existing.length > 0) {
-    return res.status(400).json({ error: "Username already exists. Please choose another." });
-  }
+  db.query("SELECT id FROM users WHERE username = ?", [username], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (rows.length > 0)
+      return res.status(400).json({ error: "Username already exists. Please choose another." });
 
-  run("INSERT INTO users (username, password) VALUES (?, ?)", [username, password]);
-  const newUser = query("SELECT id, username FROM users WHERE username = ?", [username]);
-  return res.json({ user_id: newUser[0].id, username: newUser[0].username, message: "Account created!" });
+    db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], (err2, result) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ user_id: result.insertId, username, message: "Account created!" });
+    });
+  });
 });
 
 // ── PRODUCTS ─────────────────────────────────────────────
+
 app.get("/api/products/:user_id", (req, res) => {
-  const rows = query("SELECT * FROM products WHERE user_id = ?", [req.params.user_id]);
-  res.json(rows);
+  db.query("SELECT * FROM products WHERE user_id = ?", [req.params.user_id], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 app.post("/api/products", (req, res) => {
   const { user_id, name, price } = req.body;
-  if (!user_id || !name || price == null) return res.status(400).json({ error: "Missing fields" });
+  if (!user_id || !name || price == null)
+    return res.status(400).json({ error: "Missing fields" });
 
-  const existing = query(
+  db.query(
     "SELECT id FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)",
-    [user_id, name]
+    [user_id, name],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (rows.length > 0) {
+        db.query("UPDATE products SET price = ? WHERE id = ?", [price, rows[0].id], (err2) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+          res.json({ message: "Price updated", updated: true });
+        });
+      } else {
+        db.query(
+          "INSERT INTO products (user_id, name, price) VALUES (?, ?, ?)",
+          [user_id, name, price],
+          (err2, result) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            res.json({ message: "Product added", id: result.insertId });
+          }
+        );
+      }
+    }
   );
-
-  if (existing.length > 0) {
-    run("UPDATE products SET price = ? WHERE id = ?", [price, existing[0].id]);
-    return res.json({ message: "Price updated", updated: true });
-  }
-
-  const id = run("INSERT INTO products (user_id, name, price) VALUES (?, ?, ?)", [user_id, name, price]);
-  res.json({ message: "Product added", id });
 });
 
 app.put("/api/products/:id", (req, res) => {
   const { price } = req.body;
   if (price == null) return res.status(400).json({ error: "Price required" });
-  run("UPDATE products SET price = ? WHERE id = ?", [price, req.params.id]);
-  res.json({ message: "Price updated" });
+  db.query("UPDATE products SET price = ? WHERE id = ?", [price, req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Price updated" });
+  });
 });
 
 app.delete("/api/products/:id", (req, res) => {
-  run("DELETE FROM products WHERE id = ?", [req.params.id]);
-  res.json({ message: "Product deleted" });
+  db.query("DELETE FROM products WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "Product deleted" });
+  });
 });
 
 // ── BILLS ────────────────────────────────────────────────
+
 app.get("/api/bills/:user_id", (req, res) => {
-  const bills = query(
+  db.query(
     "SELECT * FROM bills WHERE user_id = ? ORDER BY id DESC",
-    [req.params.user_id]
+    [req.params.user_id],
+    (err, bills) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (bills.length === 0) return res.json([]);
+
+      let done = 0;
+      const result = bills.map(bill => ({ ...bill, items: [] }));
+
+      result.forEach((bill, i) => {
+        db.query("SELECT * FROM bill_items WHERE bill_id = ?", [bill.id], (err2, items) => {
+          if (!err2) result[i].items = items;
+          done++;
+          if (done === result.length) res.json(result);
+        });
+      });
+    }
   );
-
-  const result = bills.map(bill => {
-    const items = query("SELECT * FROM bill_items WHERE bill_id = ?", [Number(bill.id)]);
-    return { ...bill, items };
-  });
-
-  res.json(result);
 });
 
 app.post("/api/bills", (req, res) => {
   const { user_id, invoice, customer, total, date, items } = req.body;
-  console.log("Save bill:", { user_id, customer, total, itemsCount: items?.length });
-
-  if (!user_id || !invoice || !customer || total == null || !date || !items?.length) {
+  if (!user_id || !invoice || !customer || total == null || !date || !items?.length)
     return res.status(400).json({ error: "Missing fields" });
-  }
 
-  try {
-    const bill_id = run(
-      "INSERT INTO bills (user_id, invoice, customer, total, date) VALUES (?, ?, ?, ?, ?)",
-      [Number(user_id), String(invoice), customer, Number(total), date]
-    );
-    console.log("Bill inserted, id:", bill_id);
+  db.query(
+    "INSERT INTO bills (user_id, invoice, customer, total, date) VALUES (?, ?, ?, ?, ?)",
+    [user_id, invoice, customer, total, date],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
 
-    items.forEach((item, i) => {
-      console.log("Saving item:", item.name, "bill_id:", bill_id);
-      run(
-        "INSERT INTO bill_items (bill_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?)",
-        [Number(bill_id), item.name, Number(item.price), Number(item.qty), Number(item.total)]
-      );
-    });
+      const bill_id = result.insertId;
+      let done = 0;
 
-    console.log("All items saved!");
-    res.json({ message: "Bill saved", bill_id });
-  } catch(err) {
-    console.error("Error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
+      items.forEach(item => {
+        db.query(
+          "INSERT INTO bill_items (bill_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?)",
+          [bill_id, item.name, item.price, item.qty, item.total],
+          (err2) => {
+            if (err2) console.error("item insert error:", err2.message);
+            done++;
+            if (done === items.length)
+              res.json({ message: "Bill saved", bill_id });
+          }
+        );
+      });
+    }
+  );
 });
 
 app.delete("/api/bills/:id", (req, res) => {
-  run("DELETE FROM bill_items WHERE bill_id = ?", [req.params.id]);
-  run("DELETE FROM bills WHERE id = ?", [req.params.id]);
-  res.json({ message: "Bill deleted" });
+  db.query("DELETE FROM bill_items WHERE bill_id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.query("DELETE FROM bills WHERE id = ?", [req.params.id], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ message: "Bill deleted" });
+    });
+  });
 });
 
-// ── START ────────────────────────────────────────────────
-const os = require("os");
+// ── SERVER START ─────────────────────────────────────────
 function getLocalIP() {
   const nets = os.networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === "IPv4" && !net.internal) {
-        return net.address;
-      }
-    }
-  }
+  for (const name of Object.keys(nets))
+    for (const net of nets[name])
+      if (net.family === "IPv4" && !net.internal) return net.address;
   return "localhost";
 }
 
-initDB().then(() => {
-  app.listen(process.env.PORT || 5000, () => {
-    const ip = getLocalIP();
-    console.log("\n🚀 Server is running!");
-    console.log("   Local:   http://localhost:5000/billing_system.html");
-    console.log(`   Network: http://${ip}:5000/billing_system.html\n`);
-  });
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  const ip = getLocalIP();
+  console.log("\n🚀 Server is running!");
+  console.log(`   Local:   http://localhost:${PORT}/billing_system.html`);
+  console.log(`   Network: http://${ip}:${PORT}/billing_system.html\n`);
 });
