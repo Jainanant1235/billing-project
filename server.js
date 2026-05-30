@@ -1,5 +1,3 @@
-require("dotenv").config(); // .env file load karo (local pe)
-
 const express = require("express");
 const cors    = require("cors");
 const mysql   = require("mysql2");
@@ -11,24 +9,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// ── MySQL Connection ──────────────────────────────────────
-// Local pe: .env file se values aayengi
-// Online pe: FreeSQLDatabase ki default values use hongi
+// ── MySQL Connection Pool ─────────────────────────────────
 const db = mysql.createPool({
-  host:              process.env.DB_HOST     || "sql8.freesqldatabase.com",
-  port:              process.env.DB_PORT     || 3306,
-  user:              process.env.DB_USER     || "sql8828738",
-  password:          process.env.DB_PASSWORD || "8QWWyMKMCE",
-  database:          process.env.DB_NAME     || "sql8828738",
+  host:               process.env.MYSQLHOST     || process.env.MYSQL_HOST     || "localhost",
+  port:               process.env.MYSQLPORT     || process.env.MYSQL_PORT     || 3306,
+  user:               process.env.MYSQLUSER     || process.env.MYSQL_USER     || "root",
+  password:           process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD || "1234",
+  database:           process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || "billing_db",
   waitForConnections: true,
-  connectionLimit:   5,
-  queueLimit:        0
+  connectionLimit:    5,
+  queueLimit:         0
 });
 
 // Test connection
 db.getConnection((err, connection) => {
   if (err) { console.error("❌ MySQL connect failed:", err.message); return; }
-  console.log("✅ MySQL connected! Host:", process.env.DB_HOST || "sql8.freesqldatabase.com");
+  console.log("✅ MySQL connected!");
   connection.release();
   setupTables();
 });
@@ -39,14 +35,14 @@ function setupTables() {
     id       INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(100) NOT NULL DEFAULT ''
-  )`, err => { if(err) console.error("users table:", err.message); });
+  )`, err => { if(err) console.error("users:", err.message); });
 
   db.query(`CREATE TABLE IF NOT EXISTS products (
     id      INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     name    VARCHAR(200) NOT NULL,
     price   DECIMAL(10,2) NOT NULL
-  )`, err => { if(err) console.error("products table:", err.message); });
+  )`, err => { if(err) console.error("products:", err.message); });
 
   db.query(`CREATE TABLE IF NOT EXISTS bills (
     id       INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,7 +51,7 @@ function setupTables() {
     customer VARCHAR(200) NOT NULL,
     total    DECIMAL(10,2) NOT NULL,
     date     VARCHAR(50) NOT NULL
-  )`, err => { if(err) console.error("bills table:", err.message); });
+  )`, err => { if(err) console.error("bills:", err.message); });
 
   db.query(`CREATE TABLE IF NOT EXISTS bill_items (
     id      INT AUTO_INCREMENT PRIMARY KEY,
@@ -65,7 +61,7 @@ function setupTables() {
     qty     INT NOT NULL,
     total   DECIMAL(10,2) NOT NULL
   )`, err => {
-    if(err) console.error("bill_items table:", err.message);
+    if(err) console.error("bill_items:", err.message);
     else    console.log("🗄️  Tables ready");
   });
 }
@@ -99,8 +95,7 @@ app.post("/api/signup", (req, res) => {
   db.query("SELECT id FROM users WHERE username = ?", [username], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     if (rows.length > 0)
-      return res.status(400).json({ error: "Username already exists. Please choose another." });
-
+      return res.status(400).json({ error: "Username already exists." });
     db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], (err2, result) => {
       if (err2) return res.status(500).json({ error: err2.message });
       res.json({ user_id: result.insertId, username, message: "Account created!" });
@@ -118,31 +113,22 @@ app.get("/api/products/:user_id", (req, res) => {
 
 app.post("/api/products", (req, res) => {
   const { user_id, name, price } = req.body;
-  if (!user_id || !name || price == null)
-    return res.status(400).json({ error: "Missing fields" });
+  if (!user_id || !name || price == null) return res.status(400).json({ error: "Missing fields" });
 
-  db.query(
-    "SELECT id FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)",
-    [user_id, name],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (rows.length > 0) {
-        db.query("UPDATE products SET price = ? WHERE id = ?", [price, rows[0].id], (err2) => {
-          if (err2) return res.status(500).json({ error: err2.message });
-          res.json({ message: "Price updated", updated: true });
-        });
-      } else {
-        db.query(
-          "INSERT INTO products (user_id, name, price) VALUES (?, ?, ?)",
-          [user_id, name, price],
-          (err2, result) => {
-            if (err2) return res.status(500).json({ error: err2.message });
-            res.json({ message: "Product added", id: result.insertId });
-          }
-        );
-      }
+  db.query("SELECT id FROM products WHERE user_id = ? AND LOWER(name) = LOWER(?)", [user_id, name], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (rows.length > 0) {
+      db.query("UPDATE products SET price = ? WHERE id = ?", [price, rows[0].id], (err2) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ message: "Price updated", updated: true });
+      });
+    } else {
+      db.query("INSERT INTO products (user_id, name, price) VALUES (?, ?, ?)", [user_id, name, price], (err2, result) => {
+        if (err2) return res.status(500).json({ error: err2.message });
+        res.json({ message: "Product added", id: result.insertId });
+      });
     }
-  );
+  });
 });
 
 app.put("/api/products/:id", (req, res) => {
@@ -163,24 +149,20 @@ app.delete("/api/products/:id", (req, res) => {
 
 // ── BILLS ────────────────────────────────────────────────
 app.get("/api/bills/:user_id", (req, res) => {
-  db.query(
-    "SELECT * FROM bills WHERE user_id = ? ORDER BY id DESC",
-    [req.params.user_id],
-    (err, bills) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (bills.length === 0) return res.json([]);
+  db.query("SELECT * FROM bills WHERE user_id = ? ORDER BY id DESC", [req.params.user_id], (err, bills) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (bills.length === 0) return res.json([]);
 
-      let done = 0;
-      const result = bills.map(bill => ({ ...bill, items: [] }));
-      result.forEach((bill, i) => {
-        db.query("SELECT * FROM bill_items WHERE bill_id = ?", [bill.id], (err2, items) => {
-          if (!err2) result[i].items = items;
-          done++;
-          if (done === result.length) res.json(result);
-        });
+    let done = 0;
+    const result = bills.map(bill => ({ ...bill, items: [] }));
+    result.forEach((bill, i) => {
+      db.query("SELECT * FROM bill_items WHERE bill_id = ?", [bill.id], (err2, items) => {
+        if (!err2) result[i].items = items;
+        done++;
+        if (done === result.length) res.json(result);
       });
-    }
-  );
+    });
+  });
 });
 
 app.post("/api/bills", (req, res) => {
@@ -188,26 +170,20 @@ app.post("/api/bills", (req, res) => {
   if (!user_id || !invoice || !customer || total == null || !date || !items?.length)
     return res.status(400).json({ error: "Missing fields" });
 
-  db.query(
-    "INSERT INTO bills (user_id, invoice, customer, total, date) VALUES (?, ?, ?, ?, ?)",
-    [user_id, invoice, customer, total, date],
-    (err, result) => {
+  db.query("INSERT INTO bills (user_id, invoice, customer, total, date) VALUES (?, ?, ?, ?, ?)",
+    [user_id, invoice, customer, total, date], (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       const bill_id = result.insertId;
       let done = 0;
       items.forEach(item => {
-        db.query(
-          "INSERT INTO bill_items (bill_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?)",
-          [bill_id, item.name, item.price, item.qty, item.total],
-          (err2) => {
-            if (err2) console.error("item insert error:", err2.message);
+        db.query("INSERT INTO bill_items (bill_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?)",
+          [bill_id, item.name, item.price, item.qty, item.total], (err2) => {
+            if (err2) console.error("item error:", err2.message);
             done++;
             if (done === items.length) res.json({ message: "Bill saved", bill_id });
-          }
-        );
+          });
       });
-    }
-  );
+    });
 });
 
 app.delete("/api/bills/:id", (req, res) => {
@@ -221,18 +197,7 @@ app.delete("/api/bills/:id", (req, res) => {
 });
 
 // ── SERVER START ─────────────────────────────────────────
-function getLocalIP() {
-  const nets = os.networkInterfaces();
-  for (const name of Object.keys(nets))
-    for (const net of nets[name])
-      if (net.family === "IPv4" && !net.internal) return net.address;
-  return "localhost";
-}
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  const ip = getLocalIP();
-  console.log("\n🚀 Server is running!");
-  console.log(`   Local:   http://localhost:${PORT}/billing_system.html`);
-  console.log(`   Network: http://${ip}:${PORT}/billing_system.html\n`);
+  console.log(`\n🚀 Server running on port ${PORT}`);
 });
