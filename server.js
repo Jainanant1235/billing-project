@@ -200,6 +200,19 @@ app.delete("/api/bills/:id", (req, res) => {
 
 // ── SERVER START ─────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
+
+function getLocalIP() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets))
+    for (const net of nets[name])
+      if (net.family === "IPv4" && !net.internal) return net.address;
+  return "localhost";
+}
+
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
+  const ip = getLocalIP();
+  console.log("\n🚀 Server is running!");
+  console.log(`   Local:   http://localhost:${PORT}/billing_system.html`);
+  console.log(`   Network: http://${ip}:${PORT}/billing_system.html`);
+  console.log(`   Online:  https://billing-project-production.up.railway.app/billing_system.html\n`);
 });
