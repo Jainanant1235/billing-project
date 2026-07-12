@@ -45,11 +45,3 @@ Terminal mein dikhega:
 | bill_items   | Bill ke andar items       |
 
 ---
-
-## ✅ localStorage → SQL kya change hua
-
-| Pehle (localStorage) | Ab (SQL Database)        |
-|---------------------|--------------------------|
-| Sirf browser mein   | `billing.db` file mein   |
-| Browser clear → gone | Permanent data ✅        |
-| No real DB          | SQLite (upgrade possible)|
